@@ -1,125 +1,244 @@
-<script>
-    // File upload handling
-    document.getElementById('fileInput').addEventListener('change', function(e) {
-        if (e.target.files.length > 0) {
-            const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                document.getElementById('petImage').src = e.target.result;
-                document.getElementById('previewContainer').style.display = 'block';
-            };
-            reader.readAsDataURL(file);
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Talking Pet App</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
         }
-    });
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(102, 126, 234, 0.05);
+            margin-bottom: 20px;
+        }
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: rgba(118, 75, 162, 0.1);
+        }
+        .upload-icon { font-size: 3em; margin-bottom: 15px; color: #667eea; }
+        input[type="file"] { display: none; }
+        .preview-container { margin: 20px 0; text-align: center; display: none; }
+        .pet-image { max-width: 100%; max-height: 300px; border-radius: 15px; }
+        textarea {
+            width: 100%;
+            height: 120px;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 1em;
+            margin-bottom: 20px;
+        }
+        input[type="password"] {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 1em;
+            margin-bottom: 20px;
+        }
+        button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            margin-bottom: 10px;
+        }
+        button:hover { transform: translateY(-2px); }
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
+        .loading { display: none; text-align: center; color: #667eea; margin: 20px 0; }
+        .loading.active { display: block; }
+        .result { margin-top: 30px; text-align: center; }
+        .result video { max-width: 100%; border-radius: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐾 Talking Pet</h1>
+        
+        <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+            <div class="upload-icon">📸</div>
+            <div>Click to upload your pet's photo</div>
+            <input type="file" id="fileInput" accept="image/*">
+        </div>
+        
+        <div class="preview-container" id="previewContainer">
+            <img id="petImage" class="pet-image" alt="Your pet">
+        </div>
+        
+        <textarea id="scriptInput" placeholder="What should your pet say? (e.g., 'Hello! I'm a good boy!')"></textarea>
+        
+        <input type="password" id="apiKey" placeholder="Enter your Kie AI API Key">
+        
+        <button onclick="generateVideo()">🎬 Make Pet Talk</button>
+        
+        <div class="loading" id="loading">
+            <div>🔄 Generating your talking pet video...</div>
+        </div>
+        
+        <div class="result" id="result"></div>
+    </div>
 
-    async function generateVideo() {
-        const script = document.getElementById('scriptInput').value.trim();
-        const apiKey = document.getElementById('apiKey').value.trim();
-        const fileInput = document.getElementById('fileInput');
-        
-        if (!script) {
-            alert('Please enter what your pet should say!');
-            return;
-        }
-        
-        if (!apiKey) {
-            alert('Please enter your Kie AI API key!');
-            return;
-        }
-        
-        if (!fileInput.files.length) {
-            alert('Please upload a pet image!');
-            return;
-        }
-        
-        document.getElementById('loading').classList.add('active');
-        document.getElementById('result').innerHTML = '';
-        
-        try {
-            // Convert image to base64
-            const imageBase64 = await fileToBase64(fileInput.files[0]);
+    <script>
+        // File upload handling
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            if (e.target.files.length > 0) {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('petImage').src = e.target.result;
+                    document.getElementById('previewContainer').style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        async function generateVideo() {
+            const script = document.getElementById('scriptInput').value.trim();
+            const apiKey = document.getElementById('apiKey').value.trim();
+            const fileInput = document.getElementById('fileInput');
             
-            // Call API
-            const response = await fetch('/api', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    script: script,
-                    apiKey: apiKey,
-                    imageBase64: imageBase64,
-                    action: 'generate'
-                })
-            });
-            
-            const result = await response.json();
-            
-            if (result.success) {
-                if (result.data.videoUrl) {
-                    showVideo(result.data.videoUrl);
-                } else if (result.data.taskId) {
-                    pollForVideo(result.data.taskId, apiKey);
-                }
-            } else {
-                throw new Error(result.error || 'Generation failed');
+            if (!script) {
+                alert('Please enter what your pet should say!');
+                return;
             }
             
-        } catch (error) {
-            alert('Error: ' + error.message);
-            document.getElementById('loading').classList.remove('active');
-        }
-    }
-
-    async function pollForVideo(taskId, apiKey) {
-        const maxAttempts = 60;
-        for (let i = 0; i < maxAttempts; i++) {
+            if (!apiKey) {
+                alert('Please enter your Kie AI API key!');
+                return;
+            }
+            
+            if (!fileInput.files.length) {
+                alert('Please upload a pet image!');
+                return;
+            }
+            
+            document.getElementById('loading').classList.add('active');
+            document.getElementById('result').innerHTML = '';
+            
             try {
+                // Convert image to base64
+                const imageBase64 = await fileToBase64(fileInput.files[0]);
+                
+                // Call API
                 const response = await fetch('/api', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        taskId, 
-                        apiKey,
-                        action: 'status' 
+                    body: JSON.stringify({
+                        script: script,
+                        apiKey: apiKey,
+                        imageBase64: imageBase64,
+                        action: 'generate'
                     })
                 });
                 
                 const result = await response.json();
                 
-                if (result.success && result.data.status === 'completed' && result.data.videoUrl) {
-                    showVideo(result.data.videoUrl);
-                    return;
-                } else if (result.data && result.data.status === 'failed') {
-                    throw new Error('Video generation failed');
+                if (result.success) {
+                    if (result.data.videoUrl) {
+                        showVideo(result.data.videoUrl);
+                    } else if (result.data.taskId) {
+                        pollForVideo(result.data.taskId, apiKey);
+                    }
+                } else {
+                    throw new Error(result.error || 'Generation failed');
                 }
                 
-                await new Promise(resolve => setTimeout(resolve, 5000));
             } catch (error) {
-                if (i === maxAttempts - 1) throw error;
-                await new Promise(resolve => setTimeout(resolve, 5000));
+                alert('Error: ' + error.message);
+                document.getElementById('loading').classList.remove('active');
             }
         }
-        throw new Error('Video generation timed out');
-    }
 
-    function showVideo(videoUrl) {
-        document.getElementById('loading').classList.remove('active');
-        document.getElementById('result').innerHTML = `
-            <h3>🎉 Your Talking Pet is Ready!</h3>
-            <video controls style="max-width: 100%; margin: 20px 0;">
-                <source src="${videoUrl}" type="video/mp4">
-            </video>
-            <div>
-                <button onclick="window.open('${videoUrl}', '_blank')">📥 Download Video</button>
-            </div>
-        `;
-    }
+        async function pollForVideo(taskId, apiKey) {
+            const maxAttempts = 60;
+            for (let i = 0; i < maxAttempts; i++) {
+                try {
+                    const response = await fetch('/api', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            taskId, 
+                            apiKey,
+                            action: 'status' 
+                        })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success && result.data.status === 'completed' && result.data.videoUrl) {
+                        showVideo(result.data.videoUrl);
+                        return;
+                    } else if (result.data && result.data.status === 'failed') {
+                        throw new Error('Video generation failed');
+                    }
+                    
+                    await new Promise(resolve => setTimeout(resolve, 5000));
+                } catch (error) {
+                    if (i === maxAttempts - 1) throw error;
+                    await new Promise(resolve => setTimeout(resolve, 5000));
+                }
+            }
+            throw new Error('Video generation timed out');
+        }
 
-    function fileToBase64(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result.split(',')[1]);
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-        });
-    }
-</script>
+        function showVideo(videoUrl) {
+            document.getElementById('loading').classList.remove('active');
+            document.getElementById('result').innerHTML = `
+                <h3>🎉 Your Talking Pet is Ready!</h3>
+                <video controls style="max-width: 100%; margin: 20px 0;">
+                    <source src="${videoUrl}" type="video/mp4">
+                </video>
+                <div>
+                    <button onclick="window.open('${videoUrl}', '_blank')">📥 Download Video</button>
+                </div>
+            `;
+        }
+
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+    </script>
+</body>
+</html>
