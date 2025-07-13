@@ -39,8 +39,9 @@ export default async function handler(req, res) {
         
         const imgbbResult = await imgbbResponse.json();
         
-        if (!imgbbResult.success) {
-          throw new Error('Failed to upload image to hosting service');
+       if (!imgbbResult.success) {
+  console.error('ImgBB Error:', imgbbResult);
+  throw new Error(`ImgBB upload failed: ${imgbbResult.error?.message || 'Unknown error'}`);
         }
         
         const imageUrl = imgbbResult.data.url;
