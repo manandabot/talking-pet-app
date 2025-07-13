@@ -2,10 +2,8 @@
   "name": "talking-pet-app",
   "version": "1.0.0",
   "description": "AI-powered talking pet video generator",
-  "main": "index.html",
   "scripts": {
-    "dev": "vercel dev",
-    "build": "echo 'No build needed'"
+    "build": "echo 'Build complete'"
   },
   "dependencies": {
     "node-fetch": "^2.7.0"
